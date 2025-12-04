@@ -1,0 +1,27 @@
+{
+  "patient_id": "CHILD_CHUBBY_001",
+  "name": "کودک تپل",
+  "height": 132.0,
+  "weight": 38.0,
+  "age": 8,
+  "gender": "male",
+
+  "neck": 30.0,
+  "chest": 78.0,
+  "waist": 72.0,
+  "abdomen": 82.0,
+  "hips": 88.0,
+  "shoulder_width": 36.0,
+
+  "upper_arm_right": 28.0,
+  "upper_arm_left": 28.0,
+  "thigh_right": 48.0,
+  "thigh_left": 48.0,
+
+  "leg_length_right": 62.0,
+  "leg_length_left": 62.0,
+
+  "dominant_hand": "right",
+  "dominant_foot": "right",
+  "measurement_date": "2025-11-20"
+}
