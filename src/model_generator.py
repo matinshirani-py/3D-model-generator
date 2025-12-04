@@ -1,0 +1,485 @@
+"""
+MATIN SHIRANI
+src/model_generator.py
+Generate 3D body model from SMPLX parameters with height scaling
+"""
+
+import torch
+import smplx
+import numpy as np
+import trimesh
+import os
+import json
+from typing import Dict, Any, Optional, Tuple, Union
+import logging
+from datetime import datetime
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+
+class ModelGenerator:
+    """3D model generation from SMPLX parameters with height scaling"""
+    
+    def __init__(self, 
+                 model_path: str = "data/models/",
+                 output_dir: str = "data/outputs/meshes",
+                 device: str = "cpu"):
+        
+        self.model_path = model_path
+        self.output_dir = output_dir
+        self.device = torch.device(device)
+        
+        # Create output directories
+        os.makedirs(output_dir, exist_ok=True)
+        os.makedirs(os.path.join(output_dir, "obj"), exist_ok=True)
+        os.makedirs(os.path.join(output_dir, "vertices"), exist_ok=True)
+        os.makedirs(os.path.join(output_dir, "glb"), exist_ok=True)
+        
+        self.model = None
+        self.model_type = None
+        self.current_gender = None
+        logger.info(f"ModelGenerator initialized on device: {self.device}")
+    
+    def load_smplx_model(self, gender: str = "neutral") -> bool:
+        """Load SMPLX model"""
+        # Skip reloading if same gender is already loaded
+        if self.model is not None and self.current_gender == gender:
+            logger.info(f"SMPLX model for gender '{gender}' is already loaded")
+            return True
+            
+        logger.info(f"Loading SMPLX model for gender: {gender}")
+        
+        try:
+            
+            model_file = os.path.join(self.model_path, "smplx", f"SMPLX_{gender.upper()}.npz")
+            logger.info(f"Looking for model file: {model_file}")
+            
+            if not os.path.exists(model_file):
+                logger.error(f"Model file not found: {model_file}")
+               # 
+                model_dir = os.path.join(self.model_path, "smplx")
+                if os.path.exists(model_dir):
+                    files = os.listdir(model_dir)
+                    logger.info(f"Available files in {model_dir}:")
+                    for f in files:
+                        logger.info(f"  - {f}")
+                return False
+         
+            self.model = smplx.create(
+                model_path=model_file,  
+                model_type='smplx',
+                gender=gender,
+                num_betas=10,
+                num_expression_coeffs=10,
+                use_face_contour=False,
+                ext='npz',
+                device=self.device
+            )
+            self.model_type = 'smplx'
+            self.current_gender = gender
+            logger.info(f" SMPLX model loaded successfully from: {model_file}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"SMPLX failed: {e}")
+            
+            # Try with .pkl file
+            try:
+                model_file = os.path.join(self.model_path, "smplx", f"SMPLX_{gender.upper()}.pkl")
+                logger.info(f"Trying .pkl file: {model_file}")
+                
+                if not os.path.exists(model_file):
+                    logger.error(f".pkl file not found: {model_file}")
+                    return False
+                
+                self.model = smplx.create(
+                    model_path=model_file,
+                    model_type='smplx',
+                    gender=gender,
+                    num_betas=10,
+                    use_face_contour=False,
+                    ext='pkl',
+                    device=self.device
+                )
+                self.model_type = 'smplx'
+                self.current_gender = gender
+                logger.info(f" SMPLX model loaded from .pkl: {model_file}")
+                return True
+                
+            except Exception as e2:
+                logger.error(f"Both .npz and .pkl failed: {e2}")
+                self.current_gender = None
+                return False
+    
+    def scale_vertices_to_height(self, vertices: np.ndarray, target_height_cm: float) -> Tuple[np.ndarray, float]:
+        """Scale vertices to match target height in centimeters"""
+        if target_height_cm <= 0:
+            logger.warning(f"Invalid target height: {target_height_cm}cm. Using original vertices.")
+            return vertices, 1.0
+        
+        # Calculate current height (in meters)
+        current_height_m = np.ptp(vertices[:, 1])  # Y-axis range
+        target_height_m = target_height_cm / 100.0  # Convert cm to meters
+        
+        if current_height_m <= 0:
+            logger.warning(f"Current model height is zero or invalid: {current_height_m}m")
+            return vertices, 1.0
+        
+        # Calculate scale factor
+        scale_factor = target_height_m / current_height_m
+        
+        # Apply scaling
+        scaled_vertices = vertices * scale_factor
+        
+        logger.info(f"Height scaling: {current_height_m:.3f}m -> {target_height_m:.3f}m")
+        logger.info(f"Scale factor: {scale_factor:.4f}")
+        
+        return scaled_vertices, float(scale_factor)  # Convert to Python float
+    
+    def get_patient_height_from_json(self, patient_id: str) -> Optional[float]:
+        """Try to get patient height from JSON report file"""
+        try:
+            # Try multiple possible paths
+            possible_paths = [
+                f"data/outputs/parameters/{patient_id}_report.json",
+                f"data/outputs/parameters/{patient_id}.json",
+                f"data/inputs/{patient_id}.json",
+                f"data/inputs/{patient_id}_patient.json"
+            ]
+            
+            for json_path in possible_paths:
+                if os.path.exists(json_path):
+                    with open(json_path, 'r', encoding='utf-8') as f:
+                        data = json.load(f)
+                    
+                    # Look for height in various keys
+                    height_keys = ['height', 'height_cm', 'patient_height', 'stature']
+                    
+                    for key in height_keys:
+                        if key in data:
+                            height = float(data[key])
+                            if height > 0:
+                                logger.info(f"Found height in {json_path}: {key} = {height}cm")
+                                return float(height)  # Convert to Python float
+                    
+                    # Check nested structure
+                    if 'patient_data' in data and isinstance(data['patient_data'], dict):
+                        for key in height_keys:
+                            if key in data['patient_data']:
+                                height = float(data['patient_data'][key])
+                                if height > 0:
+                                    logger.info(f"Found height in patient_data: {height}cm")
+                                    return float(height)  # Convert to Python float
+        
+        except Exception as e:
+            logger.warning(f"Could not read height from JSON files: {e}")
+        
+        return None
+    
+    def numpy_to_python(self, obj: Any) -> Any:
+        """Convert numpy types to Python native types for JSON serialization"""
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        elif isinstance(obj, np.float32):
+            return float(obj)
+        elif isinstance(obj, np.float64):
+            return float(obj)
+        elif isinstance(obj, np.int32):
+            return int(obj)
+        elif isinstance(obj, np.int64):
+            return int(obj)
+        elif isinstance(obj, (list, tuple)):
+            return [self.numpy_to_python(item) for item in obj]
+        elif isinstance(obj, dict):
+            return {key: self.numpy_to_python(value) for key, value in obj.items()}
+        else:
+            return obj
+    
+    def generate_mesh(self, betas: np.ndarray, 
+                     body_pose: np.ndarray = None,
+                     global_orient: np.ndarray = None,
+                     expression: np.ndarray = None) -> Dict[str, Any]:
+        """Generate 3D mesh from parameters"""
+        logger.info("Generating 3D mesh...")
+        
+        if self.model is None:
+            logger.error("Model not loaded. Call load_smplx_model() first.")
+            raise RuntimeError("Model not loaded")
+        
+        # Set default values
+        if body_pose is None:
+            body_pose = np.zeros((1, 63), dtype=np.float32)
+        if global_orient is None:
+            global_orient = np.zeros((1, 3), dtype=np.float32)
+        if expression is None:
+            expression = np.zeros((1, 10), dtype=np.float32)
+        
+        try:
+            # Convert to torch tensors
+            betas_tensor = torch.tensor(betas, dtype=torch.float32).to(self.device)
+            body_pose_tensor = torch.tensor(body_pose, dtype=torch.float32).to(self.device)
+            global_orient_tensor = torch.tensor(global_orient, dtype=torch.float32).to(self.device)
+            expression_tensor = torch.tensor(expression, dtype=torch.float32).to(self.device)
+            
+            # Generate mesh
+            with torch.no_grad():
+                if self.model_type == 'smplx':
+                    output = self.model(
+                        betas=betas_tensor,
+                        body_pose=body_pose_tensor,
+                        global_orient=global_orient_tensor,
+                        expression=expression_tensor,
+                        return_verts=True,
+                        return_joints=True
+                    )
+                else:  # smpl
+                    output = self.model(
+                        betas=betas_tensor,
+                        body_pose=body_pose_tensor,
+                        global_orient=global_orient_tensor,
+                        return_verts=True,
+                        return_joints=True
+                    )
+            
+            # Extract results
+            vertices = output.vertices.detach().cpu().numpy().squeeze()
+            joints = output.joints.detach().cpu().numpy().squeeze()
+            faces = self.model.faces
+            
+            logger.info(f"Mesh generated: {vertices.shape[0]} vertices, {faces.shape[0]} faces")
+            
+            # Calculate current height for reference
+            current_height_m = float(np.ptp(vertices[:, 1]))  # Convert to Python float
+            logger.info(f"Current model height (before scaling): {current_height_m:.3f}m")
+            
+            return {
+                'vertices': vertices,
+                'faces': faces,
+                'joints': joints,
+                'model_type': self.model_type,
+                'current_height_m': current_height_m,
+                'generation_timestamp': datetime.now().isoformat()
+            }
+            
+        except Exception as e:
+            logger.error(f"Error generating mesh: {e}")
+            raise
+    
+    def save_mesh(self, mesh_data: Dict[str, Any], 
+                 patient_id: str,
+                 format: str = 'obj') -> str:
+        """Save mesh to file"""
+        
+        vertices = mesh_data['vertices']
+        faces = mesh_data['faces']
+        
+        # Ensure correct dimensions
+        if vertices.ndim == 3:
+            vertices = vertices.squeeze(0)
+        
+        # Create mesh object
+        mesh = trimesh.Trimesh(vertices=vertices, faces=faces)
+        
+        # Generate filename
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"{patient_id}_{timestamp}"
+        
+        # Save in requested format
+        if format.lower() == 'obj':
+            filepath = os.path.join(self.output_dir, "obj", f"{filename}.obj")
+            mesh.export(filepath)
+            logger.info(f"OBJ file saved: {filepath}")
+            
+        elif format.lower() == 'glb':
+            filepath = os.path.join(self.output_dir, "glb", f"{filename}.glb")
+            mesh.export(filepath, file_type='glb')
+            logger.info(f"GLB file saved: {filepath}")
+            
+        else:
+            raise ValueError(f"Unsupported format: {format}")
+        
+        # Also save vertices as numpy array
+        vertices_path = os.path.join(self.output_dir, "vertices", f"{filename}_vertices.npy")
+        np.save(vertices_path, vertices)
+        logger.info(f"Vertices saved: {vertices_path}")
+        
+        return filepath
+    
+    def calculate_model_statistics(self, mesh_data: Dict[str, Any]) -> Dict[str, float]:
+        """Calculate statistics from generated mesh"""
+        vertices = mesh_data['vertices']
+        
+        # Basic statistics - convert all to Python float
+        stats = {
+            'n_vertices': int(vertices.shape[0]),
+            'n_faces': int(mesh_data['faces'].shape[0]),
+            'height': float(np.ptp(vertices[:, 1])),  # Y-axis range
+            'width': float(np.ptp(vertices[:, 0])),   # X-axis range
+            'depth': float(np.ptp(vertices[:, 2])),   # Z-axis range
+        }
+        
+        # Calculate volume and surface area if possible
+        try:
+            mesh = trimesh.Trimesh(vertices=vertices, faces=mesh_data['faces'])
+            stats['surface_area'] = float(mesh.area)
+            stats['volume'] = float(mesh.volume)
+        except Exception as e:
+            logger.warning(f"Could not calculate advanced statistics: {e}")
+            stats['surface_area'] = 0.0
+            stats['volume'] = 0.0
+        
+        return stats
+    
+    def generate_model(self, 
+                      betas: np.ndarray,
+                      patient_id: str,
+                      gender: str = "male",
+                      body_pose: np.ndarray = None,
+                      global_orient: np.ndarray = None,
+                      expression: np.ndarray = None,
+                      target_height_cm: Optional[float] = None,
+                      save_format: str = 'obj') -> Dict[str, Any]:
+        """Complete model generation pipeline with height scaling"""
+        logger.info("=" * 60)
+        logger.info("3D MODEL GENERATION PIPELINE")
+        logger.info(f"Patient ID: {patient_id}")
+        logger.info(f"Gender: {gender}")
+        logger.info("=" * 60)
+        
+        # Step 1: Load model if not already loaded
+        if self.model is None or getattr(self, 'current_gender', None) != gender:
+            if not self.load_smplx_model(gender=gender):
+                raise RuntimeError(f"Failed to load model for gender: {gender}")
+        
+        # Step 2: Generate mesh
+        mesh_data = self.generate_mesh(betas, body_pose, global_orient, expression)
+        
+        # Step 3: Get target height if not provided
+        if target_height_cm is None:
+            target_height_cm = self.get_patient_height_from_json(patient_id)
+        
+        # Step 4: Apply height scaling if target height is available
+        scale_factor = 1.0
+        original_height_m = mesh_data.get('current_height_m', 0)
+        scaled_height_m = original_height_m
+        
+        if target_height_cm is not None and target_height_cm > 0:
+            original_vertices = mesh_data['vertices'].copy()
+            scaled_vertices, scale_factor = self.scale_vertices_to_height(
+                original_vertices, 
+                target_height_cm
+            )
+            mesh_data['vertices'] = scaled_vertices
+            
+            # Update height in mesh data
+            scaled_height_m = float(np.ptp(scaled_vertices[:, 1]))
+            
+            logger.info(f" Height scaling applied: {target_height_cm}cm")
+            logger.info(f"   Original height: {original_height_m:.3f}m")
+            logger.info(f"   Scaled height: {scaled_height_m:.3f}m")
+            logger.info(f"   Scale factor: {scale_factor:.4f}")
+        else:
+            logger.warning(" No target height provided. Using SMPLX default height (~1.8-2.0m)")
+        
+        # Step 5: Save mesh
+        saved_path = self.save_mesh(mesh_data, patient_id, save_format)
+        
+        # Step 6: Calculate model statistics
+        stats = self.calculate_model_statistics(mesh_data)
+        
+        # Step 7: Generate metadata (convert all to Python types)
+        metadata = {
+            'patient_id': patient_id,
+            'model_type': mesh_data['model_type'],
+            'gender': gender,
+            'generation_timestamp': mesh_data['generation_timestamp'],
+            'file_path': saved_path,
+            'statistics': stats,
+            'scale_factor': float(scale_factor),  # Convert to Python float
+            'target_height_cm': float(target_height_cm) if target_height_cm else None,
+            'original_height_m': float(original_height_m),
+            'scaled_height_m': float(scaled_height_m),
+            'generator_version': '2.1.0'
+        }
+        
+        # Convert all numpy types to Python types
+        metadata = self.numpy_to_python(metadata)
+        
+        # Save metadata
+        metadata_path = os.path.join(
+            os.path.dirname(saved_path),
+            f"{patient_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}_metadata.json"
+        )
+        with open(metadata_path, 'w', encoding='utf-8') as f:
+            json.dump(metadata, f, indent=2, ensure_ascii=False, default=str)
+        
+        logger.info(f"Metadata saved: {metadata_path}")
+        
+        logger.info("=" * 60)
+        logger.info("MODEL GENERATION COMPLETE")
+        logger.info("=" * 60)
+        
+        return {
+            'mesh_data': mesh_data,
+            'saved_path': saved_path,
+            'metadata': metadata,
+            'statistics': stats
+        }
+
+
+# Test function
+def test_height_scaling():
+    """Test height scaling functionality"""
+    print("=" * 70)
+    print("TESTING HEIGHT SCALING")
+    print("=" * 70)
+    
+    # Initialize generator
+    generator = ModelGenerator(device="cpu")
+    
+    # Load model
+    if not generator.load_smplx_model(gender="male"):
+        print("Failed to load model")
+        return
+    
+    # Create test betas
+    test_betas = np.zeros((1, 10), dtype=np.float32)
+    
+    # Test different heights
+    test_heights = [120.0, 150.0, 170.0, 185.0, 200.0]  # cm
+    
+    for height_cm in test_heights:
+        print(f"\n🧪 Testing height: {height_cm}cm")
+        
+        try:
+            result = generator.generate_model(
+                betas=test_betas,
+                patient_id=f"TEST_H{int(height_cm)}",
+                gender="male",
+                target_height_cm=height_cm,
+                save_format='obj'
+            )
+            
+            actual_height_m = result['statistics']['height']
+            actual_height_cm = actual_height_m * 100
+            
+            print(f"  Target: {height_cm:.1f}cm")
+            print(f"  Actual: {actual_height_cm:.1f}cm")
+            print(f"  Difference: {abs(actual_height_cm - height_cm):.1f}cm")
+            
+            if abs(actual_height_cm - height_cm) < 1.0:
+                print("   PASS: Height matches target")
+            else:
+                print("   FAIL: Height mismatch")
+                
+        except Exception as e:
+            print(f"   ERROR: {e}")
+
+
+if __name__ == "__main__":
+    test_height_scaling()
