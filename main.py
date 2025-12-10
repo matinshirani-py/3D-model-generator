@@ -1,6 +1,18 @@
 """
 MATIN SHIRANI
 main.py - Main execution script with height scaling - FINAL VERSION
+
+
+| Path                        | Line    | Purpose                     |
+| --------------------------- | ------- | --------------------------- |
+| `"src"`                     | 15–17   | Module directory            |
+| `"data/outputs/parameters"` | 89      | Parameters output directory |
+| `"data/models/"`            | 133     | SMPL-X model directory      |
+| `"data/outputs/meshes"`     | 134     | 3D model output directory   |
+| `"data/outputs/parameters"` | 180     | Parameter file lookup       |
+| `"data/outputs/"`           | 197     | Summary file output         |
+| Metadata path (indirect)    | 173–178 | Depends on result           |
+
 """
 
 import os
