@@ -15,6 +15,28 @@ A sophisticated pipeline for generating **high-fidelity 3D human body models** f
 - **📈 Medical Analytics**: Calculate BMI, body fat percentage, body type classification
 - **👥 Gender Support**: Male, female, and neutral body models
 
+- 
+## 📦 SMPL-X Model Files
+
+This project uses the **SMPL-X** body model developed by the Max Planck Institute (MPI).  
+To run the pipeline, you must manually download the SMPL-X `.npz` files and place them in the correct folder.
+
+---
+
+### 🔽 Download SMPL-X Model (Required)
+
+You can download the official SMPL-X models from:
+
+🔗 **SMPL-X Official Download:**  
+https://smpl-x.is.tue.mpg.de/download.php
+
+You must create a free account, accept the license terms, and download:
+
+- `SMPLX_MALE.npz`  
+- `SMPLX_FEMALE.npz`  
+- `SMPLX_NEUTRAL.npz`
+
+---
 ## 📁 Project Structure
 
 ```
