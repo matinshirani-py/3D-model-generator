@@ -1,18 +1,6 @@
 """
 MATIN SHIRANI
 main.py - Main execution script with height scaling - FINAL VERSION
-
-
-| Path                        | Line    | Purpose                     |
-| --------------------------- | ------- | --------------------------- |
-| `"src"`                     | 15–17   | Module directory            |
-| `"data/outputs/parameters"` | 89      | Parameters output directory |
-| `"data/models/"`            | 133     | SMPL-X model directory      |
-| `"data/outputs/meshes"`     | 134     | 3D model output directory   |
-| `"data/outputs/parameters"` | 180     | Parameter file lookup       |
-| `"data/outputs/"`           | 197     | Summary file output         |
-| Metadata path (indirect)    | 173–178 | Depends on result           |
-
 """
 
 import os
@@ -21,9 +9,19 @@ import json
 import argparse
 from datetime import datetime
 
+# ========================
+# PATH CONFIGURATION
+# ========================
+SRC_DIR = "src"                                # Module directory
+PARAMS_OUTPUT_DIR = "data/outputs/parameters"          # Parameters output directory
+SMPLX_MODEL_DIR = "data/models/"               # SMPL-X model directory
+MESH_OUTPUT_DIR = "data/outputs/meshes"       # 3D model output directory
+PARAMS_LOOKUP_DIR = "data/outputs/parameters" # Parameter file lookup
+SUMMARY_OUTPUT_DIR = "data/outputs/"          # Summary file output
+
 # Add src directory to path
 current_dir = os.path.dirname(os.path.abspath(__file__))
-src_dir = os.path.join(current_dir, "src")
+src_dir = os.path.join(current_dir, SRC_DIR)
 sys.path.insert(0, src_dir)
 
 # Import modules
@@ -38,18 +36,19 @@ def get_gender_from_json(json_path: str) -> str:
         
         gender_keys = ['gender', 'sex', 'patient_gender', 'patient_sex', 'جنسیت']
         
+        gender_mapping = {
+            'm': 'male', 'male': 'male', 'man': 'male', 'مرد': 'male',
+            'f': 'female', 'female': 'female', 'woman': 'female', 'w': 'female', 'زن': 'female',
+            'n': 'neutral', 'neutral': 'neutral', 'unisex': 'neutral',
+            'unknown': 'neutral', 'other': 'neutral'
+        }
+        
         # Search in root
         for key in gender_keys:
             if key in data:
                 gender_value = data[key]
                 if isinstance(gender_value, (str, int, float)):
                     gender = str(gender_value).lower().strip()
-                    gender_mapping = {
-                        'm': 'male', 'male': 'male', 'man': 'male', 'مرد': 'male',
-                        'f': 'female', 'female': 'female', 'woman': 'female', 'w': 'female', 'زن': 'female',
-                        'n': 'neutral', 'neutral': 'neutral', 'unisex': 'neutral',
-                        'unknown': 'neutral', 'other': 'neutral'
-                    }
                     if gender in gender_mapping:
                         return gender_mapping[gender]
         
@@ -112,9 +111,8 @@ def main():
     print("=" * 70)
     
     try:
-   
         print("\n[1/4] PROCESSING PATIENT DATA...")
-        processor = DataProcessor(output_dir="data/outputs/parameters")
+        processor = DataProcessor(output_dir=PARAMS_OUTPUT_DIR)
         smplx_params, body_indices, patient_data = processor.process_patient(args.input)
         
         print(f" Data processed successfully")
@@ -133,11 +131,9 @@ def main():
         
         # Gender determination
         if args.gender:
-            # Use command-line override
             gender = args.gender.lower()
             print(f" Gender: Using command-line specified gender: {gender}")
         else:
-            # Use gender from patient data
             gender = patient_data.gender
             if gender not in ['male', 'female', 'neutral']:
                 print(f" Invalid gender '{gender}' from file, defaulting to 'neutral'")
@@ -146,23 +142,17 @@ def main():
         
         # Height determination
         if args.height_cm:
-            # Use command-line override
             height_cm = args.height_cm
             print(f" Height: Using command-line specified height: {height_cm}cm")
         elif args.no_height_scale:
-            # Skip height scaling
             height_cm = None
             print(f" Height: Height scaling disabled (using default model height)")
         elif patient_data.height > 0:
-            # Use height from patient data
             height_cm = patient_data.height
             print(f" Height: Using height from patient data: {height_cm}cm")
         else:
-            # No height available
             height_cm = None
             print(f" Height: No height found in patient data")
-            
-            # Interactive mode
             if args.interactive:
                 while True:
                     try:
@@ -170,7 +160,6 @@ def main():
                         if not height_input:
                             print("📏 Using default model height (~1.8-2.0m)")
                             break
-                        
                         height_cm = float(height_input)
                         if 50 <= height_cm <= 250:
                             print(f"📏 Using interactive input: {height_cm}cm")
@@ -186,12 +175,11 @@ def main():
         # Step 3: Generate 3D model
         print(f"\n[3/4] GENERATING 3D MODEL...")
         generator = ModelGenerator(
-            model_path="data/models/",
-            output_dir="data/outputs/meshes",
+            model_path=SMPLX_MODEL_DIR,
+            output_dir=MESH_OUTPUT_DIR,
             device=args.device
         )
         
-        # Generate model with specified gender and height
         result = generator.generate_model(
             betas=smplx_params.betas,
             patient_id=args.patient_id,
@@ -208,7 +196,6 @@ def main():
         print(f"   Model type: {result['metadata']['model_type']}")
         print(f"   Gender used: {result['metadata']['gender']}")
         
-        # Display height scaling info
         metadata = result['metadata']
         if metadata.get('target_height_cm'):
             print(f"   Target height: {metadata['target_height_cm']}cm")
@@ -228,7 +215,6 @@ def main():
         print(f"Model height: {stats['height']:.3f}m ({stats['height']*100:.1f}cm)")
         print(f"Model width: {stats['width']:.3f}m")
         print(f"Model depth: {stats['depth']:.3f}m")
-        
         if 'volume' in stats and stats['volume'] > 0:
             print(f"Model volume: {stats['volume']:.3f}m³")
         if 'surface_area' in stats and stats['surface_area'] > 0:
@@ -243,7 +229,7 @@ def main():
         print(f"   3D Model: {result['saved_path']}")
         
         # Find parameters file
-        params_dir = "data/outputs/parameters"
+        params_dir = PARAMS_LOOKUP_DIR
         if os.path.exists(params_dir):
             for file in os.listdir(params_dir):
                 if file.endswith('_params.pkl') and patient_data.patient_id in file:
@@ -253,19 +239,16 @@ def main():
         
         # Find metadata file
         model_dir = os.path.dirname(result['saved_path'])
-        metadata_pattern = f"{args.patient_id}_*_metadata.json"
-        for file in os.listdir(model_dir):
-            if file.endswith('_metadata.json') and args.patient_id in file:
-                metadata_file = os.path.join(model_dir, file)
-                print(f"   Metadata: {metadata_file}")
-                break
+        metadata_files = [f for f in os.listdir(model_dir) if f.endswith('_metadata.json') and args.patient_id in f]
+        if metadata_files:
+            metadata_file = os.path.join(model_dir, metadata_files[0])
+            print(f"   Metadata: {metadata_file}")
         
         # Save comprehensive summary file
-        summary_path = f"data/outputs/{args.patient_id}_summary.txt"
+        summary_path = os.path.join(SUMMARY_OUTPUT_DIR, f"{args.patient_id}_summary.txt")
         with open(summary_path, 'w', encoding='utf-8') as f:
             f.write(f"3D BODY MODEL GENERATION - COMPREHENSIVE SUMMARY\n")
             f.write("=" * 60 + "\n\n")
-            
             f.write(f"PATIENT INFORMATION:\n")
             f.write(f"  Patient ID: {args.patient_id}\n")
             f.write(f"  Name: {patient_data.name}\n")
@@ -314,7 +297,6 @@ def main():
                     if file.endswith('_report.json') and patient_data.patient_id in file:
                         f.write(f"  Report: {os.path.join(params_dir, file)}\n")
             
-            metadata_files = [f for f in os.listdir(model_dir) if f.endswith('_metadata.json') and args.patient_id in f]
             if metadata_files:
                 f.write(f"  Metadata: {os.path.join(model_dir, metadata_files[0])}\n")
         
@@ -343,4 +325,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
