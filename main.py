@@ -10,16 +10,16 @@ import argparse
 from datetime import datetime
 
 # ========================
-# PATH CONFIGURATION
+# PATH
 # ========================
-SRC_DIR = "src"                                # Module directory
-PARAMS_OUTPUT_DIR = "data/outputs/parameters"          # Parameters output directory
-SMPLX_MODEL_DIR = "data/models/"               # SMPL-X model directory
-MESH_OUTPUT_DIR = "data/outputs/meshes"       # 3D model output directory
-PARAMS_LOOKUP_DIR = "data/outputs/parameters" # Parameter file lookup
-SUMMARY_OUTPUT_DIR = "data/outputs/"          # Summary file output
+SRC_DIR = "src"                                
+PARAMS_OUTPUT_DIR = "data/outputs/parameters"          
+SMPLX_MODEL_DIR = "data/models/"               
+MESH_OUTPUT_DIR = "data/outputs/meshes"       
+PARAMS_LOOKUP_DIR = "data/outputs/parameters" 
+SUMMARY_OUTPUT_DIR = "data/outputs/"          
 
-# Add src directory to path
+
 current_dir = os.path.dirname(os.path.abspath(__file__))
 src_dir = os.path.join(current_dir, SRC_DIR)
 sys.path.insert(0, src_dir)
