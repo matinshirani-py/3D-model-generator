@@ -4,7 +4,7 @@ src/data_processor.py - Process input data and convert to model parameters
 """
 
 # ===========================
-# PATH CONFIGURATION 
+# PATH 
 # ==========================*
 
 PARAM_OUTPUT_BASE = "data/outputs/parameters"
