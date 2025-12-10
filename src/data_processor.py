@@ -1,6 +1,14 @@
 """
 MATIN SHIRANI
 src/data_processor.py - Process input data and convert to model parameters
+
+| Path                                                      | Line(s) | Purpose                                 |
+| --------------------------------------------------------- | ------- | --------------------------------------- |
+| `"data/outputs/parameters"`                               | 147     | Default output directory for parameters |
+| `input_json_path (e.g., data/inputs/patient_001.json)`    | ~355    | Input patient JSON file path            |
+| `f"{patient_id}_params.pkl"` (saved inside `output_dir`)  | 373–377 | Saved SMPL-X parameter file             |
+| `f"{patient_id}_report.json"` (saved inside `output_dir`) | 381–385 | Saved full patient report (JSON)        |
+
 """
 
 import json
