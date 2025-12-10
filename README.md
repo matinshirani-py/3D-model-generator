@@ -64,18 +64,140 @@ Create a JSON file in `data/inputs/`:
 
 ```json
 {
-  "patient_id": "P001",
-  "gender": "male",
-  "height_cm": 175,
-  "weight_kg": 70,
-  "age": 30,
-  "waist_cm": 80,
-  "hip_cm": 95,
-  "chest_cm": 95,
-  "shoulder_cm": 45,
-  "arm_length_cm": 60
+  "patient_id": {
+    "value": "P001",
+    "description": "Unique patient identifier."
+  },
+  "name": {
+    "value": "Male 44 years old",
+    "description": "Patient name or descriptor."
+  },
+  "height": {
+    "value": 171.0,
+    "description": "Height in centimeters."
+  },
+  "weight": {
+    "value": 110.0,
+    "description": "Weight in kilograms."
+  },
+  "age": {
+    "value": 44,
+    "description": "Age of the person in years."
+  },
+  "gender": {
+    "value": "male",
+    "description": "Biological sex of the patient."
+  },
+
+  "neck": {
+    "value": 38.0,
+    "description": "Neck circumference in cm."
+  },
+  "chest": {
+    "value": 101.0,
+    "description": "Chest circumference in cm."
+  },
+  "waist": {
+    "value": 95.0,
+    "description": "Waist circumference in cm."
+  },
+  "abdomen": {
+    "value": 150.0,
+    "description": "Abdomen circumference in cm."
+  },
+  "hips": {
+    "value": 110.0,
+    "description": "Hip circumference in cm."
+  },
+
+  "shoulder_width": {
+    "value": 36.0,
+    "description": "Shoulder width in cm."
+  },
+
+  "upper_arm_right": {
+    "value": 32.0,
+    "description": "Right upper arm circumference in cm."
+  },
+  "upper_arm_left": {
+    "value": 32.0,
+    "description": "Left upper arm circumference in cm."
+  },
+
+  "forearm_right": {
+    "value": 27.0,
+    "description": "Right forearm circumference in cm."
+  },
+  "forearm_left": {
+    "value": 27.0,
+    "description": "Left forearm circumference in cm."
+  },
+
+  "wrist_right": {
+    "value": 17.0,
+    "description": "Right wrist circumference in cm."
+  },
+  "wrist_left": {
+    "value": 17.0,
+    "description": "Left wrist circumference in cm."
+  },
+
+  "arm_length_right": {
+    "value": 73.0,
+    "description": "Right arm length in cm."
+  },
+  "arm_length_left": {
+    "value": 73.0,
+    "description": "Left arm length in cm."
+  },
+
+  "leg_length_right": {
+    "value": 85.0,
+    "description": "Right leg length in cm."
+  },
+  "leg_length_left": {
+    "value": 85.0,
+    "description": "Left leg length in cm."
+  },
+
+  "thigh_right": {
+    "value": 55.0,
+    "description": "Right thigh circumference in cm."
+  },
+  "thigh_left": {
+    "value": 55.0,
+    "description": "Left thigh circumference in cm."
+  },
+
+  "calf_right": {
+    "value": 37.0,
+    "description": "Right calf circumference in cm."
+  },
+  "calf_left": {
+    "value": 37.0,
+    "description": "Left calf circumference in cm."
+  },
+
+  "dominant_hand": {
+    "value": "right",
+    "description": "Dominant hand of the patient."
+  },
+  "dominant_foot": {
+    "value": "right",
+    "description": "Dominant foot of the patient."
+  },
+
+  "measurement_date": {
+    "value": "2024-01-15",
+    "description": "Date when measurements were taken."
+  },
+
+  "notes": {
+    "value": "Patient with abdominal obesity. Medical measurements taken by professional.",
+    "description": "Additional notes regarding the patient."
+  }
 }
-```
+
 
 ### 3. Generate 3D Model
 
