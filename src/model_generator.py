@@ -2,6 +2,24 @@
 MATIN SHIRANI
 src/model_generator.py
 Generate 3D body model from SMPLX parameters with height scaling
+
+| Path                                                 | Line(s) | Purpose                                            |
+| ---------------------------------------------------- | ------- | -------------------------------------------------- |
+| `"data/models/"`                                     | 21      | Base directory for SMPL-X model files              |
+| `"data/outputs/meshes"`                              | 22      | Main output directory for generated models         |
+| `os.path.join(output_dir, "obj")`                    | 29      | Directory for exported `.obj` files                |
+| `os.path.join(output_dir, "vertices")`               | 30      | Directory for saved NumPy vertex arrays (`.npy`)   |
+| `os.path.join(output_dir, "glb")`                    | 31      | Directory for exported `.glb` files                |
+| `os.path.join(self.model_path, "smplx", ...)`        | 49–54   | SMPL-X model `.npz` or `.pkl` file loading path    |
+| `"data/outputs/parameters/{patient_id}_report.json"` | 133–146 | Possible input path for retrieving patient height  |
+| `"data/outputs/parameters/{patient_id}.json"`        | 133–146 | Alternate height source file                       |
+| `"data/inputs/{patient_id}.json"`                    | 133–146 | Another fallback input file                        |
+| `"data/inputs/{patient_id}_patient.json"`            | 133–146 | Another alternate patient JSON path                |
+| `os.path.join(self.output_dir, "obj", ...)`          | 239–245 | Save final 3D output as `.obj`                     |
+| `os.path.join(self.output_dir, "glb", ...)`          | 246–252 | Save final 3D output as `.glb`                     |
+| `os.path.join(self.output_dir, "vertices", ...)`     | 255–258 | Save vertex positions as `.npy`                    |
+| `os.path.join(os.path.dirname(saved_path), ...)`     | 327–336 | Save metadata JSON file next to the exported model |
+
 """
 
 import torch
