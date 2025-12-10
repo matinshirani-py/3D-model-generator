@@ -19,22 +19,56 @@ A sophisticated pipeline for generating **high-fidelity 3D human body models** f
 
 ```
 3d-body-model-generator/
-├── main.py                      # Main pipeline script
-├── requirements.txt             # Python dependencies
-├── data/                        # Data directory
-│   ├── inputs/                  # Patient JSON files
-│   └── outputs/                 # Generated outputs
-│       ├── meshes/              # 3D models (.obj, .glb)
-│       └── parameters/          # Processed parameters (.pkl)
-├── src/                         # Source code
+project-root/
+│
+├── data/
+│   ├── inputs/
+│   │   ├── patient_001.json
+|   |
+│   │
+│   ├── models/
+│   │   └── smplx/
+│   │       ├── SMPLX_FEMALE.npz
+│   │       ├── SMPLX_MALE.npz
+│   │       ├── SMPLX_NEUTRAL.npz
+│   │       │
+│   │       └── SMPLX_1.1/
+│   │           └── smplx/
+│   │               ├── SMPLX_FEMALE.npz
+│   │               ├── SMPLX_MALE.npz
+│   │               └── SMPLX_NEUTRAL.npz
+│   │
+│   └── outputs/
+│       ├── CHILD_CHUBBY_001_summary.json
+│       ├── patient_001_summary.txt
+│       ├── patient_003_summary.txt
+│       ├── patient_004_summary.txt
+│       ├── patient_005_summary.txt
+│       ├── patient_006_summary.txt
+│       └── patient_007_summary.txt
+│
+│       ├── meshes/
+│       │   ├── glb/
+│       │   ├── obj/
+│       │   │   ├── patient_007_20251204_163623.obj
+│       │   │   └── patient_007_20251204_163623_metadata.json
+│       │   │
+│       │   └── vertices/
+|       |
+│       │
+│       └── parameters/
+|
+│
+├── src/
+│   ├── data_processor.py
+│   ├── model_generator.py
 │   ├── __init__.py
-│   ├── data_processor.py       # Patient data processing
-│   ├── model_generator.py      # SMPL-X model generation
-│   ├── body_indices.py         # Medical indices calculator
-│   └── smplx_parameters.py     # SMPL-X parameters manager
-└── docs/                        # Documentation
-    ├── examples/               # Example files
-    └── images/                 # Screenshots and previews
+│   
+|
+│
+└── __pycache__/
+    └── open3d.cpython-310.pyc
+
 ```
 
 ## 🚀 Quick Start
